@@ -1,0 +1,10 @@
+C:\Users\Drew\source\repos\TransTemp\TransTemp\bin\Debug\TransTemp.exe.config
+C:\Users\Drew\source\repos\TransTemp\TransTemp\bin\Debug\TransTemp.exe
+C:\Users\Drew\source\repos\TransTemp\TransTemp\bin\Debug\TransTemp.pdb
+C:\Users\Drew\source\repos\TransTemp\TransTemp\obj\Debug\TransTemp.csprojAssemblyReference.cache
+C:\Users\Drew\source\repos\TransTemp\TransTemp\obj\Debug\TransTemp.Properties.Resources.resources
+C:\Users\Drew\source\repos\TransTemp\TransTemp\obj\Debug\TransTemp.csproj.GenerateResource.cache
+C:\Users\Drew\source\repos\TransTemp\TransTemp\obj\Debug\TransTemp.csproj.CoreCompileInputs.cache
+C:\Users\Drew\source\repos\TransTemp\TransTemp\obj\Debug\TransTemp.exe
+C:\Users\Drew\source\repos\TransTemp\TransTemp\obj\Debug\TransTemp.pdb
+C:\Users\Drew\source\repos\TransTemp\TransTemp\obj\Debug\TransTemp.Form1.resources
