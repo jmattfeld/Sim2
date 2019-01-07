@@ -10,9 +10,6 @@ using System.Windows.Forms;
 using System.IO;
 
 
-// This is the code for your desktop app.
-// Press Ctrl+F5 (or go to Debug > Start Without Debugging) to run your app.
-
 namespace TransTemp
 {
     public partial class Form1 : Form
@@ -26,22 +23,6 @@ namespace TransTemp
 
         public SaveFileDialog sfd = new SaveFileDialog();
         private StreamWriter stOutFile;
-
-        public SaveFileDialog mmfd = new SaveFileDialog();
-        private StreamWriter stMaxMinFile;
-
-
-        // FILTER_LEN 10 / cutoff freq=0.010417 Hz
-        //        double[] coeffs = new double[] { 0.016154,0.037930,0.093105,0.155901,0.196910,
-        //            0.196910,0.155901,0.093105,0.037930,0.016154 };
-
-        double[] coeffs = new double[] { 0.035697, 0.241063, 0.446480, 0.241063, 0.035697 };
-
-        const int FILTER_LEN = 5;
-        const uint INPUT_SAMPLE_LEN = 1;
-        const uint INPUT_BUFFER_LEN = (FILTER_LEN - 1 + INPUT_SAMPLE_LEN);
-        float[] sampleBuffer = new float[INPUT_BUFFER_LEN];
-        uint idx;
 
         // Master calibration tables arrays
         int[] nMLen = new int[64];              // Current length of master point table
@@ -76,7 +57,7 @@ namespace TransTemp
         float[,] fMctp = new float[64, 25];
         float[,] fBctp = new float[64, 25];
 
-
+#if(false)
         // Low temp pressures for current press plane
         float[] fLPTemp = new float[25];    // Temperatures
         float[] fLPPress = new float[25];   // Pressures
@@ -99,14 +80,7 @@ namespace TransTemp
         float[] fBNdxCpp = new float[64];
         float[,] fMcpp = new float[64, 25];
         float[,] fBcpp = new float[64, 25];
-
-        int nWorkingChan = 0;           // WOrking channel zero based
-        float fWorkingPress = 0.0F;     // WOrking channel zero based
-
-//        int[] nSampleFrame = new int[5000];
-//        float[] fSamplePress = new float[5000];
-
-        float[] fTempOld = new float[10] {0.0F,0.0F,0.0F,0.0F,0.0F,0.0F,0.0F,0.0F,0.0F,0.0F};
+#endif
 
         //temp history and filtered history
         float[] fTempHist = new float[40];
@@ -139,8 +113,7 @@ namespace TransTemp
         float[] fTempSecDerHistF7 = new float[20];
         float[] fTempSecDerHistF8 = new float[20];
 
-        float fMaxDer;
-        float fMinDer;
+
         float[] fMaxCor = new float[64];
         float[] fMinCor = new float[64];
 
@@ -150,15 +123,12 @@ namespace TransTemp
         int[] nFrameAtStepT = new int[8];
         int[] nFrameAtStepC = new int[64];
 
-
         float[] fBaseTemp = new float[8];
         int[] nBaseCounts = new int[64];
-        int nStartSample = 2575;
+//        int nStartSample = 2575;
+
 //        float fTempInc = 0.08F;
 //        int nCountsInc = -200;
-
-        float fTempInc = 0.08F;
-        int nCountsInc = -200;
 
         private float RollingAvgFilter(float[] fTempHistory, int samples)
         {
@@ -188,53 +158,6 @@ namespace TransTemp
             return;
         }
 
-
-
-
-
-
-
-        float[] fDerTempOld = new float[4] { 0.0F, 0.0F, 0.0F, 0.0F };
-
-        private float DerAvgFilter(float tempin)
-        {
-            float fRet;
-
-            fRet = (tempin + fDerTempOld[0] + fDerTempOld[1] + fDerTempOld[2]) / 4.0F;
-
-//            fDerTempOld[3] = fDerTempOld[2];
-            fDerTempOld[2] = fDerTempOld[1];
-            fDerTempOld[1] = fDerTempOld[0];
-            fDerTempOld[0] = tempin;
-
-            return fRet;
-        }
-
-        private void SaveOld(float tempin, float[] fTempHist)
-        {
-            // Shift old temp samples
-            for (int i = 19 ; i > 0 ; i--) {
-                fTempHist[i] = fTempHist[i-1];
-            }
-            fTempHist[0] = tempin;
-
-            return;
-        }
-
-        private void SaveOldDer(float tempin)
-        {
-
-            // Shift old temp samples
-            for (int i = 19; i > 0; i--)
-            {
-                fTempDerHist[i] = fTempDerHist[i - 1];
-            }
-            fTempDerHist[0] = tempin;
-
-            return;
-        }
-
-
         private float Derivative(float[] fTempHist, int delta)
         {
             float fRet;
@@ -242,71 +165,7 @@ namespace TransTemp
             return fRet;
         }
 
-
-        private float Gain(float tempin)
-        {
-            float fRet;
-
-            if (tempin < 45.0F)
-                fRet = 0.1F;
-            else
-                fRet = 2.0F;
-
-            return fRet;
-        }
-
-        float[] fSecDerTempOld = new float[4] { 0.0F, 0.0F, 0.0F, 0.0F };
-        private float SecDerivative(float tempin)
-        {
-            float fRet;
-
-#if(false)
-            int cntp = 0;
-            int cntn = 0;
-
-
-
-            for (int i=1; i<10; i++)
-            {
-                if (fTempDerHist[i] > fTempDerHist[i-1])
-                {
-                    cntp++;
-                }
-
-                if (fTempDerHist[i] < fTempDerHist[i - 1])
-                {
-                    cntn++;
-                }
-
-            }
-
-            if (cntp > 9) fRet = 0.21F;
-            else if (cntn > 9) fRet = -0.21F;
-            else fRet = 0.0F;
-#endif
-
-            fRet = fTempDerHist[0] - fTempDerHist[1];
-
-            return fRet;
-        }
-
-
-        private float SecDerAvgFilter(float tempin)
-        {
-            float fRet;
-
-            fRet = (tempin + fSecDerTempOld[0] + fSecDerTempOld[1] + fSecDerTempOld[2]) / 4.0F;
-
-            //            fDerTempOld[3] = fDerTempOld[2];
-            fSecDerTempOld[2] = fSecDerTempOld[1];
-            fSecDerTempOld[1] = fSecDerTempOld[0];
-            fSecDerTempOld[0] = tempin;
-
-            return fRet;
-        }
-
-
-#if(false)
+#if (false)
         
         private float LowPassFilter(float tempin)
         {
@@ -337,37 +196,24 @@ namespace TransTemp
             InitializeComponent();
         }
 
-        private void linkLabel1_LinkClicked(object sender, LinkLabelLinkClickedEventArgs e)
-        {
-            // Click on the link below to continue learning how to build a desktop app using WinForms!
-//            System.Diagnostics.Process.Start("http://aka.ms/dotnet-get-started-desktop");
-
-        }
-
-        private void button1_Click(object sender, EventArgs e)
-        {
-            MessageBox.Show("Thanks!");
-        }
-
         private void exitToolStripMenuItem_Click(object sender, EventArgs e)
         {
             Application.Exit();
         }
 
         // Processes one line at a time
-        float[] fPressOdd = new float[64];
-        float[] fPressEven = new float[64];
-        float fTempOdd;
+//        float[] fPressOdd = new float[64];
+//        float[] fPressEven = new float[64];
+//        float fTempOdd;
 
-        float[,] fACorPress = new float[64,10000];
-        int nACorPressNdx;
+//        float[,] fACorPress = new float[64,10000];
+//        int nACorPressNdx;
 
         private void ProcessData(string[] token)
         {
             int nFrame;
             float fTemp;
             float[] fAllTemps = new float[8];
-            float fAvgTemp;
             float fPress;
             int lCnts;
             float fFilteredTemp;
@@ -380,8 +226,6 @@ namespace TransTemp
             float fFilteredTemp7;
             float fFilteredTemp8;
             float fCorrPress;
-            float fUnPress;
-            float fFilPress;
             float fDer;
             float fDer1;
             float fDer2;
@@ -393,38 +237,14 @@ namespace TransTemp
             float fDer8;
 
             float fDerUn;
-            float fSecDer;
-            float fSecDer1;
-            float fSecDer2;
-            float fSecDer3;
-            float fSecDer4;
-            float fSecDer5;
-            float fSecDer6;
-            float fSecDer7;
-            float fSecDer8;
 
-            float fSecDerUn;
-            float fAdj;
+            nFrame = Convert.ToInt16(token[0]); // Get frame number from line
 
-
-            //            nWorkingChan = Convert.ToInt16(textBox1.Text) - 1;
-            //            fWorkingPress = Convert.ToSingle(textBox2.Text);
-
-            nFrame = Convert.ToInt16(token[0]);
-
-            if ((nFrame < 2000) || (nFrame > 3500)) return;
-
-            fAvgTemp = 0.0F;
             for (int ts = 0; ts < 8; ts++)
             {
-                fAllTemps[ts] = Convert.ToSingle(token[3 + ts]);
-                fAvgTemp = fAvgTemp + fAllTemps[ts];
+                fAllTemps[ts] = Convert.ToSingle(token[3 + ts]);    // Get all 8 temperatures from line
             }
-            fAvgTemp = fAvgTemp / 8.0F;
-            //            fTemp = fAvgTemp;
-
-            //            fTemp = (fAllTemps[0] + fAllTemps[1]) / 2.0F;
-            fTemp = fAllTemps[0];   // 0 fastest, 7 slowest
+            fTemp = fAllTemps[0];
 
 #if (false)
             // Handle odd frames
@@ -448,24 +268,11 @@ namespace TransTemp
                 }
             }
 #endif
-
-#if (false)
-            nFrame = Convert.ToInt16(token[0]);
-            fTemp = Convert.ToSingle(token[2]);
-            fPress = Convert.ToSingle(token[16]);    // 9
-            lCnts = Convert.ToInt32(token[32]);      // 25
-#endif
-
-            //            int avgamt = 38; // Was 2, 4
-            //            int avgamtd = 4; // Was 2, 4
-            //            int deramt = 2;
-
-            int avgamt = 19; // Was 2, 4
+            int avgamt = 2; // Was 2, 4
             int avgamtd = 2; // Was 2, 4
             int deramt = 1;
 
-
-            // Save old samples temp history
+            // Filter temperature
             UpdateHistory(fTemp, fTempHist);
             fFilteredTemp = RollingAvgFilter(fTempHist, avgamt);
 
@@ -494,8 +301,9 @@ namespace TransTemp
             fFilteredTemp8 = RollingAvgFilter(fTempHistF8, avgamt);
 
             // Derivative
-            fDerUn = Derivative(fTempHist, deramt);  // Was 1 with .5
+            fDerUn = Derivative(fTempHistF2, deramt);  // Was 1 with .5
 
+            // Filter derivative
             UpdateHistory(fDerUn, fTempDerHist);
             fDer = RollingAvgFilter(fTempDerHist, avgamtd);
 
@@ -522,61 +330,7 @@ namespace TransTemp
 
             UpdateHistory(fDer7, fTempDerHistF8);
             fDer8 = RollingAvgFilter(fTempDerHistF8, avgamtd);
-#if (false)
 
-
-            // Second derivative
-            fSecDerUn = Derivative(fTempDerHistF3, 5) * 10.0F;
-
-            UpdateHistory(fSecDerUn, fTempSecDerHist);
-            fSecDer = RollingAvgFilter(fTempSecDerHist, avgamt);   // Was 4
-
-            UpdateHistory(fSecDer, fTempSecDerHistF1);
-            fSecDer1 = RollingAvgFilter(fTempSecDerHistF1, avgamt);   // Was 4
-
-            UpdateHistory(fSecDer1, fTempSecDerHistF2);
-            fSecDer2 = RollingAvgFilter(fTempSecDerHistF2, avgamt);   // Was 4
-
-            UpdateHistory(fSecDer2, fTempSecDerHistF3);
-            fSecDer3 = RollingAvgFilter(fTempSecDerHistF3, avgamt);   // Was 4
-
-            UpdateHistory(fSecDer3, fTempSecDerHistF4);
-            fSecDer4 = RollingAvgFilter(fTempSecDerHistF4, avgamt);   // Was 4
-
-            UpdateHistory(fSecDer4, fTempSecDerHistF5);
-            fSecDer5 = RollingAvgFilter(fTempSecDerHistF5, avgamt);   // Was 4
-
-            UpdateHistory(fSecDer5, fTempSecDerHistF6);
-            fSecDer6 = RollingAvgFilter(fTempSecDerHistF6, avgamt);   // Was 4
-
-            UpdateHistory(fSecDer6, fTempSecDerHistF7);
-            fSecDer7 = RollingAvgFilter(fTempSecDerHistF7, avgamt);   // Was 4
-
-            UpdateHistory(fSecDer7, fTempSecDerHistF8);
-            fSecDer8 = RollingAvgFilter(fTempSecDerHistF8, avgamt);   // Was 4
-#endif
-#if (false)
-
-            // Test picking gain
-            if (fDer > 0.0F) {
-                if (fSecDer > 0.0F)
-                    fGain = 0.03F;
-                else if (fSecDer < 0.0F)
-                    fGain = 0.05F;
-                else
-                    fGain = 0.0F;
-            }
-
-            if (fDer < 0.0F)
-            {
-                if (fSecDer > 0.0F)
-                    fGain = 0.09F;
-                else if (fSecDer < 0.0F)
-                    fGain = 0.09F;
-                else
-                    fGain = 0.0F;
-            }
-#endif
 #if (false)
             // STEP RESPONSE CODE
             // Find the first sample past N that has increased by X
@@ -634,95 +388,6 @@ namespace TransTemp
                 }
             }
 #endif
-#if (false)
-            if (nFrame > 500)
-            {
-                if (fDer8 > fMaxDer) fMaxDer = fDer8;
-                if (fDer8 < fMinDer) fMinDer = fDer8;
-            }
-#endif
-#if (false)
-            if (nFrame < 277)
-            {
-                fGain = 0.15F;
-            } else if (nFrame < 2329)
-            {
-                fGain = 0.11F;
-            } else if (nFrame< 2407)
-            {
-                fGain = 0.05F;
-            }
-            else if (nFrame < 2564)
-            {
-                fGain = 0.04F;
-            }
-            else if (nFrame < 2662)
-            {
-                fGain = 0.01F;
-            }
-            else if (nFrame< 4150)
-            {
-                fGain = -0.2F;
-            } else if (nFrame< 4475)
-            {
-                fGain = 0.15F;
-            } else
-            {
-                fGain = 0.11F;
-            }
-#endif
-#if (false)
-            if (fDer > 0.01F)
-            {
-                fGain = 0.05F;  // Pos der
-
-            } else if (fDer < -0.01F)
-            {
-                fGain = 0.13F;  // Neg der
-
-            } else
-            {
-                fGain = 0.0F;
-            }
-#endif
-#if (false)
-
-            //            SaveOldDer(fDer);
-            //            fSecDer = SecDerivative(fDer);
-            //            fSecDer = SecDerAvgFilter(fSecDerUn);
-
-            // Create steady state temperature for these counts
-            cvtCreateCpp(fWorkingPress, nWorkingChan);
-            float fTss = cvtCntsToTemp(nWorkingChan, lCnts);
-
-            //            fAdj = (fFilteredTemp - fTss) * fDer;
-
-            // Work with unadjusted temp
-            //            cvtCreateCtp(fFilteredTemp, nWorkingChan);
-            //            fUnPress = cvtSingleRawPktToEu(nWorkingChan, lCnts);
-
-
-
-            // Work with adjusted temp
-            //            cvtCreateCtp(fFilteredTemp + fAdj, nWorkingChan);
-            //            cvtCreateCtp(fFilteredTemp + fAdj, nWorkingChan);
-            //            fCorrPress = cvtSingleRawPktToEu(nWorkingChan, lCnts);
-
-            // Place in sample array for chart
-            //            nSampleFrame[nFrame] = nFrame;
-            //            fSamplePress[nFrame] = fUnPress;
-#endif
-#if (false)
-            string sOut = nFrame.ToString() + "," +
-                fFilteredTemp.ToString() + "," +
-                fDer.ToString() + "," +
-                fAdj.ToString() + "," +
-                fTss.ToString() + "," +
-                lCnts.ToString() + "," +
-                fPress.ToString() + "," +
-                fUnPress.ToString() + "," +
-                fCorrPress.ToString();
-#endif
 
             string sOut1 =
                 nFrame.ToString() + "," +
@@ -740,66 +405,22 @@ namespace TransTemp
 
                 // Create corrected pressure
                 fChanTemp = cvtGetChanTemp(fAllTemps, c);
-                //                fCorTemp = fChanTemp - (fDer8 * cvtGetChanGain(c));   // For run
-
-                fCorTemp = fChanTemp - (fDer8 * fStoredGains[nStoredGainNdx]);     // For finding gain
+                fCorTemp = fChanTemp - (fDer8 * cvtGetChanGain(c));   // For run
 
                 cvtCreateCtp(fCorTemp, c);
                 fCorrPress = cvtSingleRawPktToEu(c, lCnts);
-
-                fACorPress[c, nACorPressNdx] = fCorrPress;
-
-                // Correct pressure from temperature derivative
-                //                fCorrPress = fPress - (fDer8 * cvtGetChanGain(c));
-
-#if (false)
-                // For pressure = 15
-                if (fDer8 > 0.0F)
-                    fAdj = fChanPosGain[c] / 1.4F * fDer8;
-                else
-                    fAdj = fChanNegGain[c] / 2.0F * fDer8;
-#endif
-#if (false)
-                fAdj = 0.03F * fDer;
-
-                if (fAdj > 0.003F) fAdj = 0.003F;
-                if (fAdj < -0.003F) fAdj = -0.003F;
-
-
-                fCorrPress = fPress - fAdj;
-
-                float fCor = fPress - fWorkingPress;
-                if (nFrame > 500)
-                {
-                    if (fCor > fMaxCor[c]) fMaxCor[c] = fCor;
-                    if (fCor < fMinCor[c]) fMinCor[c] = fCor;
-                }
-#endif
 
                 sOut2 = fPress.ToString() + "," +
                     fCorrPress.ToString() + ",";
 
                 sOut1 += sOut2;
             }
-            nACorPressNdx++;
 
-            if (bOutFileOpen) {
-                if (nFrame > 500)
-                {
-                    stOutFile.WriteLine(sOut1);
-                }
+            if (nFrame > 500)
+            {
+                stOutFile.WriteLine(sOut1);
             }
         }
-
-        float fInc = 0.1F;
-        float fStart = 2.0F;
-        float fEnd = 4.0F;
-//        int nLoops;
-        const int NUM_GAINS = 40;
-        float[] fStoredGains = new float[NUM_GAINS];
-        int nStoredGainNdx = 0;
-        float[,] fMaxP = new float[64,NUM_GAINS];
-        float[,] fMinP = new float[64,NUM_GAINS];
 
 
         private void loadDataFileToolStripMenuItem_Click(object sender, EventArgs e)
@@ -818,78 +439,29 @@ namespace TransTemp
                 // Attempt to open upload file
                 if (File.Exists(sDataFileName) == true)
                 {
-                    fMaxDer = 0.0F;
-                    fMinDer = 0.0F;
+                    // Open selected file
+                    stDataFile = new StreamReader(sDataFileName);
+                    Console.WriteLine("Opened file " + sDataFileName);
 
-                    // Init min and max
-
-                    for (int i=0; i< NUM_GAINS; i++)
+                    // Loop through file
+                    while ((sLine = stDataFile.ReadLine()) != null)
                     {
-                        for (int c = 0; c < 64; c++)
-                        {
-                            fMaxP[c,i] = 0.0F;
-                            fMinP[c,i] = 100.0F;
-                        }
+                        // Read a line
+                        //                        System.Console.WriteLine(sLine);
 
-                        fStoredGains[i] = fStart + (fInc * (float)i);
+                        // Break into tokens delimited by comma
+                        string[] sToken = sLine.Split(',');
+                        ProcessData(sToken);   // Adjust temp
                     }
 
-
-                    // Loop through to find gains
-                    float fLoops = (fEnd - fStart) / fInc;
-                    int nLoops = (int)fLoops;
-                    Console.WriteLine("Looping " + nLoops.ToString());
-                    for (nStoredGainNdx = 0; nStoredGainNdx < nLoops; nStoredGainNdx++)
-                    {
-
-                        // Open selected file
-                        stDataFile = new StreamReader(sDataFileName);
-                        Console.WriteLine("Opened file " + sDataFileName);
-                        nACorPressNdx = 0;
-
-                        // Loop through file
-                        while ((sLine = stDataFile.ReadLine()) != null)
-                        {
-                            // Read a line
-                            //                        System.Console.WriteLine(sLine);
-
-                            // Break into tokens delimited by comma
-                            string[] sToken = sLine.Split(',');
-                            ProcessData(sToken);   // Adjust temp
-
-                        }
-
-                        stDataFile.Close();
-                        if (bOutFileOpen) {
-                            stOutFile.Close();
-                            Console.WriteLine("Closed file " + sDataFileName);
-                        }
-
-                        // Find max and min
-                        for (int l = 0; l < nACorPressNdx; l++) {
-
-                            for (int c = 0; c < 64; c++)
-                            {
-                                if (fACorPress[c, l] > fMaxP[c,nStoredGainNdx]) fMaxP[c,nStoredGainNdx] = fACorPress[c, l];
-                                if (fACorPress[c, l] < fMinP[c,nStoredGainNdx]) fMinP[c,nStoredGainNdx] = fACorPress[c, l];
-                            }
-                        }
-
-                        // Write max min 
-                        Console.WriteLine("Max Min " +
-                            nStoredGainNdx.ToString() + " " +
-                            fStoredGains[nStoredGainNdx].ToString() + " " +
-                            fMaxP[6, nStoredGainNdx].ToString() + " " +
-                            fMinP[6, nStoredGainNdx].ToString());
-
-
-                    }
-
-
+                    stDataFile.Close();
+                    stOutFile.Close();
+                    Console.WriteLine("Closed file " + sDataFileName);
                 }
             }
         }
 
+#if (fasle)
         private void WriteMaxMinFile(string sMaxMinFileName)
         {
 
@@ -914,8 +486,9 @@ namespace TransTemp
             stMaxMinFile.Close();
             Console.WriteLine("Closed file " + stMaxMinFile);
         }
+#endif
 
-        bool bOutFileOpen = false;
+//        bool bOutFileOpen = false;
         private void outFIleToolStripMenuItem_Click(object sender, EventArgs e)
         {
             string sOutFileName;
@@ -929,7 +502,7 @@ namespace TransTemp
                 // Save selected file
                 stOutFile = new StreamWriter(sOutFileName);
                 Console.WriteLine("Opened out file " + stOutFile);
-                bOutFileOpen = true;
+//                bOutFileOpen = true;
 
                 string sOut1 = "F,T,T,D,";
 //                string sOut1 = "F,T,";
@@ -945,33 +518,6 @@ namespace TransTemp
 
             }
         }
-
-        private void DisplayChart(int samples, float[] fPressUncor, float[] fPressCor)
-        {
-
-
-
-
-        }
-
-
-        private void displayChartToolStripMenuItem_Click(object sender, EventArgs e)
-        {
-
-
-            chart1.Titles.Add("Pressure");
-
-            chart1.Series[0].Label = "#VALY{#.###}";
-
-            //            string[] xValues = { "First", "Second", "Third" };
-//            int[] xValues = nSampleFrame;
-//            float[] yValues = { 6.12F, 7.23F, 5.45F };
-
-//            chart1.Series[0].Points.DataBindXY(xValues, yValues);
-//            chart1.Series[0].Points.DataBindXY(nSampleFrame, fSamplePress);
-//            chart1.Series[0].IsValueShownAsLabel = false;
-        }
-
 
         // Processes the calibration file 
         private void ProcessCal(int lineno, string[] token)
@@ -1208,7 +754,7 @@ namespace TransTemp
         }
 
 
-
+#if (false)
         // Channel is zero based
         void cvtCreateCpp(float fPress, int nChan)
         {
@@ -1386,11 +932,9 @@ t.ToString() + " " +
 fMNdxCpp[nChan].ToString() + " " +
 fBNdxCpp[nChan].ToString());
 
-
-
         }
-
-
+#endif
+#if (false)
         private float cvtCntsToTemp(int c, long lCounts)
         {
             float fTemp;
@@ -1438,8 +982,7 @@ fTemp.ToString());
 
             return (fTemp);
         }
-
-
+#endif
 
         private float cvtSingleRawPktToEu(int c, long lCounts)
         {
@@ -1470,9 +1013,8 @@ fTemp.ToString());
 
 
         // Returns gain temperature for specific channels
-            private float cvtGetChanGain(int c)
+        private float cvtGetChanGain(int c)
         {
-
             float fGain = 3.0F;
 
             switch (c + 1)
@@ -1503,7 +1045,7 @@ fTemp.ToString());
                     fGain = 2.0F;
                     break;
                 case 9:
-                    fGain = 3.2F;
+                    fGain = 4.2F;
                     break;
                 case 10:
                     fGain = 2.9F;
@@ -1594,23 +1136,10 @@ fTemp.ToString());
                     break;
             }
 #endif
-
-                    return (fGain);
+            return (fGain);
         }
 
-
-
-
-        private void channelToolStripMenuItem_Click(object sender, EventArgs e)
-        {
-
-        }
-
-        private void textBox1_TextChanged(object sender, EventArgs e)
-        {
-
-        }
-
+#if (false)
         private void saveMaxMinToolStripMenuItem_Click(object sender, EventArgs e)
         {
             string sOutFileName;
@@ -1625,7 +1154,7 @@ fTemp.ToString());
                 WriteMaxMinFile(sOutFileName);
             }
         }
-
+#endif
 
         private float cvtGetChanTemp(float[] fpTemp, int nChan)
         {
@@ -1818,8 +1347,7 @@ fTemp.ToString());
             return (fChanTemp);
         }
 
-
-
+#if (fasle)
 
         float[] fChanPosGain = new float[64];
         float[] fChanNegGain = new float[64];
@@ -1876,7 +1404,7 @@ fTemp.ToString());
 
                 }
             }
-
         }
+#endif
     }
 }
